@@ -1,0 +1,41 @@
+{
+  "name": "bare-zlib",
+  "version": "1.0.0",
+  "description": "Stream-based zlib bindings for JavaScript",
+  "exports": {
+    ".": "./index.js",
+    "./package": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "binding.c",
+    "binding.js",
+    "CMakeLists.txt",
+    "lib",
+    "prebuilds",
+    "vendor/zlib/*.c",
+    "vendor/zlib/*.h",
+    "vendor/zlib/win32/*.rc"
+  ],
+  "addon": true,
+  "scripts": {
+    "test": "standard && bare test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holepunchto/bare-zlib.git"
+  },
+  "author": "Holepunch",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/holepunchto/bare-zlib/issues"
+  },
+  "homepage": "https://github.com/holepunchto/bare-zlib",
+  "dependencies": {
+    "bare-stream": "^1.0.0"
+  },
+  "devDependencies": {
+    "brittle": "^3.5.0",
+    "standard": "^17.1.0"
+  }
+}

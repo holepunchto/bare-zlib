@@ -1,0 +1,4 @@
+[submodule "vendor/zlib"]
+	path = vendor/zlib
+	url = ../../madler/zlib.git
+	shallow = true
