@@ -8,6 +8,13 @@
 #include <utf/string.h>
 #include <zlib.h>
 
+#define BARE_ZLIB_ERROR_CODES(V) \
+  V(STREAM_ERROR) \
+  V(DATA_ERROR) \
+  V(MEM_ERROR) \
+  V(BUF_ERROR) \
+  V(VERSION_ERROR)
+
 typedef struct {
   z_stream handle;
 
@@ -20,6 +27,16 @@ enum {
   bare_zlib_deflate = 1,
   bare_zlib_inflate,
 };
+
+static inline const char *
+bare_zlib__error_code (int err) {
+#define V(code) \
+  if (err == Z_##code) return #code;
+  BARE_ZLIB_ERROR_CODES(V)
+#undef V
+
+  return "UNKNOWN_ERROR";
+}
 
 static void *
 bare_zlib__on_alloc (void *opaque, unsigned int items, unsigned int size) {
@@ -72,7 +89,7 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
     break;
   }
 
-  assert(err == 0);
+  assert(err == Z_OK);
 
   return handle;
 }
@@ -131,11 +148,14 @@ bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
     break;
   }
 
-  assert(err >= 0);
+  js_value_t *result = NULL;
 
-  js_value_t *result;
-  err = js_create_uint32(env, stream->handle.avail_out, &result);
-  assert(err == 0);
+  if (err < Z_OK) {
+    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+  } else {
+    err = js_create_uint32(env, stream->handle.avail_out, &result);
+    assert(err == 0);
+  }
 
   return result;
 }
@@ -165,7 +185,9 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
     break;
   }
 
-  assert(err == 0);
+  if (err < Z_OK) {
+    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+  }
 
   return NULL;
 }
@@ -212,7 +234,7 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
 #define V(name) \
   { \
     js_value_t *val; \
-    err = js_create_uint32(env, name, &val); \
+    err = js_create_int32(env, name, &val); \
     assert(err == 0); \
     err = js_set_named_property(env, constants, #name, val); \
     assert(err == 0); \
@@ -225,6 +247,16 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   V(Z_FINISH)
   V(Z_BLOCK)
   V(Z_TREES)
+
+  V(Z_OK)
+  V(Z_STREAM_END)
+  V(Z_NEED_DICT)
+  V(Z_ERRNO)
+  V(Z_STREAM_ERROR)
+  V(Z_DATA_ERROR)
+  V(Z_MEM_ERROR)
+  V(Z_BUF_ERROR)
+  V(Z_VERSION_ERROR)
 #undef V
 
   return exports;

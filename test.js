@@ -13,3 +13,13 @@ test('deflate + inflate', (t) => {
 
   deflate.end('hello')
 })
+
+test('inflate, write invalid', (t) => {
+  t.plan(1)
+
+  const inflate = new zlib.Inflate()
+
+  inflate
+    .on('error', (err) => t.is(err.code, 'DATA_ERROR'))
+    .end('foo bar')
+})

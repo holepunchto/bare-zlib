@@ -1,7 +1,7 @@
 const { Transform } = require('bare-stream')
 const binding = require('./binding')
-
-const constants = exports.constants = binding.constants
+const constants = exports.constants = require('./lib/constants')
+const errors = exports.errors = require('./lib/errors')
 
 class ZlibStream extends Transform {
   constructor (mode, opts = {}) {
@@ -28,7 +28,11 @@ class ZlibStream extends Transform {
 
     let available
     do {
-      available = binding.transform(this._handle, this._flush)
+      try {
+        available = binding.transform(this._handle, this._flush)
+      } catch (err) {
+        return cb(errors[err.code](err.message))
+      }
 
       const read = this._buffer.length - available
 
@@ -44,13 +48,22 @@ class ZlibStream extends Transform {
   }
 
   _final (cb) {
-    const available = binding.transform(this._handle, this._finishFlush)
+    let available
+    try {
+      available = binding.transform(this._handle, this._finishFlush)
+    } catch (err) {
+      return cb(errors[err.code](err.message))
+    }
 
     const read = this._buffer.length - available
 
     if (read) this.push(this._buffer.subarray(0, read))
 
-    binding.end(this._handle)
+    try {
+      binding.end(this._handle)
+    } catch (err) {
+      return cb(errors[err.code](err.message))
+    }
 
     cb(null)
   }
