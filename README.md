@@ -1,6 +1,6 @@
 # bare-zlib
 
-Stream-based zlib binding for JavaScript.
+Stream-based zlib bindings for JavaScript.
 
 ```
 npm i bare-zlib

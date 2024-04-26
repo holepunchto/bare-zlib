@@ -56,16 +56,24 @@ class ZlibStream extends Transform {
   }
 }
 
-exports.Deflate = class ZlibDeflateStream extends ZlibStream {
+const Deflate = exports.Deflate = class ZlibDeflateStream extends ZlibStream {
   constructor (opts) {
     super(binding.DEFLATE, opts)
   }
 }
 
-exports.Inflate = class ZlibInflateStream extends ZlibStream {
+exports.createDeflate = function createDeflate (opts) {
+  return new Deflate(opts)
+}
+
+const Inflate = exports.Inflate = class ZlibInflateStream extends ZlibStream {
   constructor (opts) {
     super(binding.INFLATE, opts)
   }
+}
+
+exports.createInflate = function createInflate (opts) {
+  return new Inflate(opts)
 }
 
 function mapWritable (data) {
