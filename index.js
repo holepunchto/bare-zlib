@@ -1,7 +1,9 @@
-const { Transform } = require('bare-stream')
+const { Transform, Writable } = require('bare-stream')
 const binding = require('./binding')
 const constants = exports.constants = require('./lib/constants')
 const errors = exports.errors = require('./lib/errors')
+
+const EMPTY = Buffer.alloc(0)
 
 class ZlibStream extends Transform {
   constructor (mode, opts = {}) {
@@ -15,21 +17,46 @@ class ZlibStream extends Transform {
 
     this._mode = mode
 
-    this._flush = flush
-    this._finishFlush = finishFlush
+    this._flushMode = flush
+    this._finishFlushMode = finishFlush
 
     this._buffer = Buffer.allocUnsafe(chunkSize)
 
     this._handle = binding.init(this._mode, this._buffer)
   }
 
+  flush (mode = constants.Z_FULL_FLUSH, cb) {
+    if (typeof mode === 'function') {
+      cb = mode
+      mode = constants.Z_FULL_FLUSH
+    }
+
+    return this._flush(mode, cb)
+  }
+
+  async _flush (mode, cb) {
+    if (await Writable.drained(this)) {
+      const previousMode = this._flushMode
+
+      this._flushMode = mode
+
+      this.write(EMPTY)
+
+      await Writable.drained(this)
+
+      this._flushMode = previousMode
+    }
+
+    if (cb) cb(null)
+  }
+
   _transform (data, cb) {
-    binding.chunk(this._handle, data)
+    binding.load(this._handle, data)
 
     let available
     do {
       try {
-        available = binding.transform(this._handle, this._flush)
+        available = binding.transform(this._handle, this._flushMode)
       } catch (err) {
         return cb(errors[err.code](err.message))
       }
@@ -50,7 +77,7 @@ class ZlibStream extends Transform {
   _final (cb) {
     let available
     try {
-      available = binding.transform(this._handle, this._finishFlush)
+      available = binding.transform(this._handle, this._finishFlushMode)
     } catch (err) {
       return cb(errors[err.code](err.message))
     }

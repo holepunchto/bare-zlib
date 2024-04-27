@@ -95,7 +95,7 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_chunk (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_load (js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 2;
@@ -206,7 +206,7 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   }
 
   V("init", bare_zlib_init)
-  V("chunk", bare_zlib_chunk)
+  V("load", bare_zlib_load)
   V("transform", bare_zlib_transform)
   V("end", bare_zlib_end)
 #undef V
