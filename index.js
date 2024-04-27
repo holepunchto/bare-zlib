@@ -25,16 +25,12 @@ class ZlibStream extends Transform {
     this._handle = binding.init(this._mode, this._buffer)
   }
 
-  flush (mode = constants.Z_FULL_FLUSH, cb) {
+  async flush (mode = constants.Z_FULL_FLUSH, cb) {
     if (typeof mode === 'function') {
       cb = mode
       mode = constants.Z_FULL_FLUSH
     }
 
-    return this._flush(mode, cb)
-  }
-
-  async _flush (mode, cb) {
     if (await Writable.drained(this)) {
       const previousMode = this._flushMode
 
@@ -74,7 +70,7 @@ class ZlibStream extends Transform {
     cb(null)
   }
 
-  _final (cb) {
+  _flush (cb) {
     let available
     try {
       available = binding.transform(this._handle, this._finishFlushMode)
