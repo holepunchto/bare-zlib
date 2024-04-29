@@ -193,6 +193,38 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
+bare_zlib_reset (js_env_t *env, js_callback_info_t *info) {
+  int err;
+
+  size_t argc = 1;
+  js_value_t *argv[1];
+
+  err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
+  assert(err == 0);
+
+  assert(argc == 1);
+
+  bare_zlib_stream_t *stream;
+  err = js_get_arraybuffer_info(env, argv[0], (void **) &stream, NULL);
+  assert(err == 0);
+
+  switch (stream->mode) {
+  case bare_zlib_deflate:
+    err = deflateReset(&stream->handle);
+    break;
+  case bare_zlib_inflate:
+    err = inflateReset(&stream->handle);
+    break;
+  }
+
+  if (err < Z_OK) {
+    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+  }
+
+  return NULL;
+}
+
+static js_value_t *
 bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   int err;
 
@@ -209,6 +241,7 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   V("load", bare_zlib_load)
   V("transform", bare_zlib_transform)
   V("end", bare_zlib_end)
+  V("reset", bare_zlib_reset)
 #undef V
 
 #define V(name, n) \

@@ -46,6 +46,14 @@ class ZlibStream extends Transform {
     if (cb) cb(null)
   }
 
+  reset () {
+    if (this._handle === NULL) {
+      throw errors.STREAM_CLOSED('Stream has already closed')
+    }
+
+    binding.reset(this._handle)
+  }
+
   _transform (data, cb) {
     binding.load(this._handle, data)
 
@@ -87,6 +95,8 @@ class ZlibStream extends Transform {
     } catch (err) {
       return cb(errors[err.code](err.message))
     }
+
+    this._handle = null
 
     cb(null)
   }
