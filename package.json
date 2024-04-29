@@ -16,6 +16,7 @@
     "lib",
     "prebuilds",
     "vendor/zlib/*.c",
+    "vendor/zlib/*.cmakein",
     "vendor/zlib/*.h",
     "vendor/zlib/win32/*.rc"
   ],

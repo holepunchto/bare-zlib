@@ -7,6 +7,8 @@ include(bare)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(NOT TARGET zlib)
+  set(ZLIB_BUILD_EXAMPLES OFF)
+
   add_subdirectory(vendor/zlib EXCLUDE_FROM_ALL)
 endif()
 
