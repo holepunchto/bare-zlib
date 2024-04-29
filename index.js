@@ -47,7 +47,7 @@ class ZlibStream extends Transform {
   }
 
   reset () {
-    if (this._handle === NULL) {
+    if (this._handle === null) {
       throw errors.STREAM_CLOSED('Stream has already closed')
     }
 
