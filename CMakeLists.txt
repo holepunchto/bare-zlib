@@ -4,6 +4,8 @@ project(bare_zlib C)
 
 include(bare)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 if(NOT TARGET zlib)
   add_subdirectory(vendor/zlib EXCLUDE_FROM_ALL)
 endif()
