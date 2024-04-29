@@ -15,6 +15,7 @@
     "CMakeLists.txt",
     "lib",
     "prebuilds",
+    "vendor/zlib/LICENSE",
     "vendor/zlib/*.c",
     "vendor/zlib/*.cmakein",
     "vendor/zlib/*.h",
