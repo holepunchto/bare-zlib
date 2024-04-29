@@ -43,7 +43,7 @@ class ZlibStream extends Transform {
       this._flushMode = previousMode
     }
 
-    if (cb) cb(null)
+    if (cb) cb(null) // For Node.js compatibility
   }
 
   reset () {
