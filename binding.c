@@ -87,6 +87,8 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
   case bare_zlib_inflate:
     err = inflateInit(&stream->handle);
     break;
+  default:
+    return NULL;
   }
 
   assert(err == Z_OK);
