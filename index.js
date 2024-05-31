@@ -7,7 +7,7 @@ const EMPTY = Buffer.alloc(0)
 
 class ZlibStream extends Transform {
   constructor (mode, opts = {}) {
-    super({ mapWritable })
+    super()
 
     const {
       flush = constants.Z_NO_FLUSH,
@@ -54,7 +54,7 @@ class ZlibStream extends Transform {
     binding.reset(this._handle)
   }
 
-  _transform (data, cb) {
+  _transform (data, encoding, cb) {
     binding.load(this._handle, data)
 
     let available
@@ -120,8 +120,4 @@ const Inflate = exports.Inflate = class ZlibInflateStream extends ZlibStream {
 
 exports.createInflate = function createInflate (opts) {
   return new Inflate(opts)
-}
-
-function mapWritable (data) {
-  return typeof data === 'string' ? Buffer.from(data) : data
 }
