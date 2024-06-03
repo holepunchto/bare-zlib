@@ -2,7 +2,6 @@
 #include <bare.h>
 #include <js.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
 #include <utf.h>
 #include <utf/string.h>
@@ -21,7 +20,16 @@ typedef struct {
   int mode;
 
   uv_buf_t read;
+
+  js_env_t *env;
+  js_ref_t *ctx;
+  js_ref_t *on_alloc;
+  js_ref_t *on_free;
 } bare_zlib_stream_t;
+
+typedef struct {
+  uint32_t id;
+} bare_zlib_allocation_t;
 
 enum {
   bare_zlib_deflate = 1,
@@ -42,29 +50,92 @@ bare_zlib__error_code (int err) {
 
 static void *
 bare_zlib__on_alloc (void *opaque, unsigned int items, unsigned int size) {
+  int err;
+
   bare_zlib_stream_t *stream = (bare_zlib_stream_t *) opaque;
 
-  return calloc(items, size);
+  js_env_t *env = stream->env;
+
+  js_escapable_handle_scope_t *scope;
+  err = js_open_escapable_handle_scope(env, &scope);
+  assert(err == 0);
+
+  js_value_t *ctx;
+  err = js_get_reference_value(env, stream->ctx, &ctx);
+  assert(err == 0);
+
+  js_value_t *cb;
+  err = js_get_reference_value(env, stream->on_alloc, &cb);
+  assert(err == 0);
+
+  js_value_t *args[1];
+
+  err = js_create_uint32(env, sizeof(bare_zlib_allocation_t) + items * size, &args[0]);
+  assert(err == 0);
+
+  js_value_t *result;
+
+  err = js_call_function(env, ctx, cb, 1, args, &result);
+  assert(err == 0);
+
+  err = js_escape_handle(env, scope, result, &result);
+  assert(err == 0);
+
+  bare_zlib_allocation_t *allocation;
+  err = js_get_typedarray_info(env, result, NULL, (void *) &allocation, NULL, NULL, NULL);
+  assert(err == 0);
+
+  err = js_close_escapable_handle_scope(env, scope);
+  assert(err == 0);
+
+  return ((char *) allocation) + sizeof(bare_zlib_allocation_t);
 }
 
 static void
-bare_zlib__on_free (void *opaque, void *address) {
+bare_zlib__on_free (void *opaque, void *ptr) {
+  int err;
+
   bare_zlib_stream_t *stream = (bare_zlib_stream_t *) opaque;
 
-  free(address);
+  js_env_t *env = stream->env;
+
+  js_handle_scope_t *scope;
+  err = js_open_handle_scope(env, &scope);
+  assert(err == 0);
+
+  js_value_t *ctx;
+  err = js_get_reference_value(env, stream->ctx, &ctx);
+  assert(err == 0);
+
+  js_value_t *cb;
+  err = js_get_reference_value(env, stream->on_free, &cb);
+  assert(err == 0);
+
+  bare_zlib_allocation_t *allocation = (bare_zlib_allocation_t *) (((char *) ptr) - sizeof(bare_zlib_allocation_t));
+
+  js_value_t *args[1];
+
+  err = js_create_uint32(env, allocation->id, &args[0]);
+  assert(err == 0);
+
+  err = js_call_function(env, ctx, cb, 1, args, NULL);
+  assert(err == 0);
+
+  err = js_close_handle_scope(env, scope);
+  assert(err == 0);
 }
 
 static js_value_t *
 bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
   int err;
 
-  size_t argc = 2;
-  js_value_t *argv[2];
+  size_t argc = 5;
+  js_value_t *argv[5];
 
   err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
   assert(err == 0);
 
-  assert(argc == 2);
+  assert(argc == 5);
 
   js_value_t *handle;
 
@@ -80,6 +151,17 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
   assert(err == 0);
 
   err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->read.base, (size_t *) &stream->read.len, NULL, NULL);
+  assert(err == 0);
+
+  stream->env = env;
+
+  err = js_create_reference(env, argv[2], 1, &stream->ctx);
+  assert(err == 0);
+
+  err = js_create_reference(env, argv[3], 1, &stream->on_alloc);
+  assert(err == 0);
+
+  err = js_create_reference(env, argv[4], 1, &stream->on_free);
   assert(err == 0);
 
   switch (stream->mode) {
@@ -198,6 +280,15 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
   if (err < Z_OK) {
     js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
   }
+
+  err = js_delete_reference(env, stream->on_alloc);
+  assert(err == 0);
+
+  err = js_delete_reference(env, stream->on_free);
+  assert(err == 0);
+
+  err = js_delete_reference(env, stream->ctx);
+  assert(err == 0);
 
   return NULL;
 }

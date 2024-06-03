@@ -19,10 +19,29 @@ class ZlibStream extends Transform {
 
     this._flushMode = flush
     this._finishFlushMode = finishFlush
+    this._allocations = []
 
     this._buffer = Buffer.allocUnsafe(chunkSize)
 
-    this._handle = binding.init(this._mode, this._buffer)
+    this._handle = binding.init(this._mode, this._buffer, this, this._onalloc, this._onfree)
+  }
+
+  _onalloc (size) {
+    const buffer = Buffer.allocUnsafe(size)
+
+    const view = new Uint32Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 4)
+
+    view[0] = this._allocations.push(view) - 1
+
+    return buffer
+  }
+
+  _onfree (id) {
+    const last = this._allocations.pop()
+
+    if (last[0] !== id) {
+      this._allocations[last[0] = id] = last
+    }
   }
 
   async flush (mode = constants.Z_FULL_FLUSH, cb) {
