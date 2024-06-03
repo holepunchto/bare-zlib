@@ -25,7 +25,9 @@ typedef struct {
 
 enum {
   bare_zlib_deflate = 1,
+  bare_zlib_deflate_raw,
   bare_zlib_inflate,
+  bare_zlib_inflate_raw,
 };
 
 static inline const char *
@@ -82,9 +84,11 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
 
   switch (stream->mode) {
   case bare_zlib_deflate:
+  case bare_zlib_deflate_raw:
     err = deflateInit(&stream->handle, Z_DEFAULT_COMPRESSION);
     break;
   case bare_zlib_inflate:
+  case bare_zlib_inflate_raw:
     err = inflateInit(&stream->handle);
     break;
   default:
@@ -143,9 +147,11 @@ bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
 
   switch (stream->mode) {
   case bare_zlib_deflate:
+  case bare_zlib_deflate_raw:
     err = deflate(&stream->handle, flush);
     break;
   case bare_zlib_inflate:
+  case bare_zlib_inflate_raw:
     err = inflate(&stream->handle, flush);
     break;
   }
@@ -180,9 +186,11 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
 
   switch (stream->mode) {
   case bare_zlib_deflate:
+  case bare_zlib_deflate_raw:
     err = deflateEnd(&stream->handle);
     break;
   case bare_zlib_inflate:
+  case bare_zlib_inflate_raw:
     err = inflateEnd(&stream->handle);
     break;
   }
@@ -212,9 +220,11 @@ bare_zlib_reset (js_env_t *env, js_callback_info_t *info) {
 
   switch (stream->mode) {
   case bare_zlib_deflate:
+  case bare_zlib_deflate_raw:
     err = deflateReset(&stream->handle);
     break;
   case bare_zlib_inflate:
+  case bare_zlib_inflate_raw:
     err = inflateReset(&stream->handle);
     break;
   }
@@ -256,7 +266,9 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   }
 
   V("DEFLATE", bare_zlib_deflate)
+  V("DEFLATE_RAW", bare_zlib_deflate_raw)
   V("INFLATE", bare_zlib_inflate)
+  V("INFLATE_RAW", bare_zlib_inflate_raw)
 #undef V
 
   js_value_t *constants;

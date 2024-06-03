@@ -102,22 +102,42 @@ class ZlibStream extends Transform {
   }
 }
 
-const Deflate = exports.Deflate = class ZlibDeflateStream extends ZlibStream {
+exports.Deflate = class ZlibDeflateStream extends ZlibStream {
   constructor (opts) {
     super(binding.DEFLATE, opts)
   }
 }
 
 exports.createDeflate = function createDeflate (opts) {
-  return new Deflate(opts)
+  return new exports.Deflate(opts)
 }
 
-const Inflate = exports.Inflate = class ZlibInflateStream extends ZlibStream {
+exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
+  constructor (opts) {
+    super(binding.DEFLATE_RAW, opts)
+  }
+}
+
+exports.createDeflateRaw = function createDeflateRaw (opts) {
+  return new exports.DeflateRaw(opts)
+}
+
+exports.Inflate = class ZlibInflateStream extends ZlibStream {
   constructor (opts) {
     super(binding.INFLATE, opts)
   }
 }
 
 exports.createInflate = function createInflate (opts) {
-  return new Inflate(opts)
+  return new exports.Inflate(opts)
+}
+
+exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
+  constructor (opts) {
+    super(binding.INFLATE_RAW, opts)
+  }
+}
+
+exports.createInflateRaw = function createInflateRaw (opts) {
+  return new exports.InflateRaw(opts)
 }
