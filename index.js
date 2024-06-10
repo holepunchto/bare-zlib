@@ -3,8 +3,6 @@ const binding = require('./binding')
 const constants = exports.constants = require('./lib/constants')
 const errors = exports.errors = require('./lib/errors')
 
-const EMPTY = Buffer.alloc(0)
-
 class ZlibStream extends Transform {
   constructor (mode, opts = {}) {
     super()
@@ -57,17 +55,13 @@ class ZlibStream extends Transform {
       mode = constants.Z_FULL_FLUSH
     }
 
-    if (await Writable.drained(this)) {
-      const previousMode = this._flushMode
+    const previousMode = this._flushMode
 
-      this._flushMode = mode
+    this._flushMode = mode
 
-      this.write(EMPTY)
+    await Writable.drained(this)
 
-      await Writable.drained(this)
-
-      this._flushMode = previousMode
-    }
+    this._flushMode = previousMode
 
     if (cb) cb(null) // For Node.js compatibility
   }
