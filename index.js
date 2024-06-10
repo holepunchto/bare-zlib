@@ -12,7 +12,11 @@ class ZlibStream extends Transform {
     const {
       flush = constants.Z_NO_FLUSH,
       finishFlush = constants.Z_FINISH,
-      chunkSize = 16 * 1024
+      chunkSize = constants.Z_DEFAULT_CHUNK,
+      level = constants.Z_DEFAULT_LEVEL,
+      windowBits = constants.Z_DEFAULT_WINDOWBITS,
+      memLevel = constants.Z_DEFAULT_MEMLEVEL,
+      strategy = constants.Z_DEFAULT_STRATEGY
     } = opts
 
     this._mode = mode
@@ -23,7 +27,10 @@ class ZlibStream extends Transform {
 
     this._buffer = Buffer.allocUnsafe(chunkSize)
 
-    this._handle = binding.init(this._mode, this._buffer, this, this._onalloc, this._onfree)
+    this._handle = binding.init(this._mode, this._buffer, level, windowBits, memLevel, strategy, this,
+      this._onalloc,
+      this._onfree
+    )
   }
 
   _onalloc (size) {
@@ -131,16 +138,6 @@ exports.createDeflate = function createDeflate (opts) {
   return new exports.Deflate(opts)
 }
 
-exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
-  constructor (opts) {
-    super(binding.DEFLATE_RAW, opts)
-  }
-}
-
-exports.createDeflateRaw = function createDeflateRaw (opts) {
-  return new exports.DeflateRaw(opts)
-}
-
 exports.Inflate = class ZlibInflateStream extends ZlibStream {
   constructor (opts) {
     super(binding.INFLATE, opts)
@@ -151,6 +148,16 @@ exports.createInflate = function createInflate (opts) {
   return new exports.Inflate(opts)
 }
 
+exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
+  constructor (opts) {
+    super(binding.DEFLATE_RAW, opts)
+  }
+}
+
+exports.createDeflateRaw = function createDeflateRaw (opts) {
+  return new exports.DeflateRaw(opts)
+}
+
 exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
   constructor (opts) {
     super(binding.INFLATE_RAW, opts)
@@ -159,4 +166,24 @@ exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
 
 exports.createInflateRaw = function createInflateRaw (opts) {
   return new exports.InflateRaw(opts)
+}
+
+exports.Gzip = class ZlibGzipStream extends ZlibStream {
+  constructor (opts) {
+    super(binding.GZIP, opts)
+  }
+}
+
+exports.createGzip = function createGzip (opts) {
+  return new exports.Gzip(opts)
+}
+
+exports.Gunzip = class ZlibGunzipStream extends ZlibStream {
+  constructor (opts) {
+    super(binding.GUNZIP, opts)
+  }
+}
+
+exports.createGunzip = function createGunzip (opts) {
+  return new exports.Gunzip(opts)
 }

@@ -1,11 +1,28 @@
 #include <assert.h>
 #include <bare.h>
 #include <js.h>
+#include <limits.h>
 #include <stddef.h>
 #include <string.h>
 #include <utf.h>
 #include <utf/string.h>
 #include <zlib.h>
+
+#define Z_MIN_CHUNK     64
+#define Z_MAX_CHUNK     INT32_MAX
+#define Z_DEFAULT_CHUNK 1024 * 16
+
+#define Z_MIN_MEMLEVEL     1
+#define Z_MAX_MEMLEVEL     9
+#define Z_DEFAULT_MEMLEVEL 8
+
+#define Z_MIN_LEVEL     -1
+#define Z_MAX_LEVEL     9
+#define Z_DEFAULT_LEVEL Z_DEFAULT_COMPRESSION
+
+#define Z_MIN_WINDOWBITS     8
+#define Z_MAX_WINDOWBITS     15
+#define Z_DEFAULT_WINDOWBITS 15
 
 #define BARE_ZLIB_ERROR_CODES(V) \
   V(STREAM_ERROR) \
@@ -33,9 +50,11 @@ typedef struct {
 
 enum {
   bare_zlib_deflate = 1,
-  bare_zlib_deflate_raw,
   bare_zlib_inflate,
+  bare_zlib_deflate_raw,
   bare_zlib_inflate_raw,
+  bare_zlib_gzip,
+  bare_zlib_gunzip,
 };
 
 static inline const char *
@@ -46,6 +65,11 @@ bare_zlib__error_code (int err) {
 #undef V
 
   return "UNKNOWN_ERROR";
+}
+
+static inline const char *
+bare_zlib__error_message (int err, bare_zlib_stream_t *stream) {
+  return stream->handle.msg == NULL ? "Unknown error" : stream->handle.msg;
 }
 
 static void *
@@ -129,13 +153,13 @@ static js_value_t *
 bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
   int err;
 
-  size_t argc = 5;
-  js_value_t *argv[5];
+  size_t argc = 9;
+  js_value_t *argv[9];
 
   err = js_get_callback_info(env, info, &argc, argv, NULL, NULL);
   assert(err == 0);
 
-  assert(argc == 5);
+  assert(argc == 9);
 
   js_value_t *handle;
 
@@ -153,25 +177,55 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
   err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->read.base, (size_t *) &stream->read.len, NULL, NULL);
   assert(err == 0);
 
+  int level;
+  err = js_get_value_int32(env, argv[2], &level);
+  assert(err == 0);
+
+  int window_bits;
+  err = js_get_value_int32(env, argv[3], &window_bits);
+  assert(err == 0);
+
+  int mem_level;
+  err = js_get_value_int32(env, argv[4], &mem_level);
+  assert(err == 0);
+
+  int strategy;
+  err = js_get_value_int32(env, argv[5], &strategy);
+  assert(err == 0);
+
   stream->env = env;
 
-  err = js_create_reference(env, argv[2], 1, &stream->ctx);
+  err = js_create_reference(env, argv[6], 1, &stream->ctx);
   assert(err == 0);
 
-  err = js_create_reference(env, argv[3], 1, &stream->on_alloc);
+  err = js_create_reference(env, argv[7], 1, &stream->on_alloc);
   assert(err == 0);
 
-  err = js_create_reference(env, argv[4], 1, &stream->on_free);
+  err = js_create_reference(env, argv[8], 1, &stream->on_free);
   assert(err == 0);
+
+  if (
+    stream->mode == bare_zlib_gzip ||
+    stream->mode == bare_zlib_gunzip
+  ) {
+    window_bits += 16; // Offset by 16 to enable gzip mode
+  } else if (
+    stream->mode == bare_zlib_deflate_raw ||
+    stream->mode == bare_zlib_inflate_raw
+  ) {
+    window_bits *= -1; // Flip the sign to enable raw mode
+  }
 
   switch (stream->mode) {
   case bare_zlib_deflate:
   case bare_zlib_deflate_raw:
-    err = deflateInit(&stream->handle, Z_DEFAULT_COMPRESSION);
+  case bare_zlib_gzip:
+    err = deflateInit2(&stream->handle, level, Z_DEFLATED, window_bits, mem_level, strategy);
     break;
   case bare_zlib_inflate:
   case bare_zlib_inflate_raw:
-    err = inflateInit(&stream->handle);
+  case bare_zlib_gunzip:
+    err = inflateInit2(&stream->handle, window_bits);
     break;
   default:
     return NULL;
@@ -230,10 +284,12 @@ bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
   switch (stream->mode) {
   case bare_zlib_deflate:
   case bare_zlib_deflate_raw:
+  case bare_zlib_gzip:
     err = deflate(&stream->handle, flush);
     break;
   case bare_zlib_inflate:
   case bare_zlib_inflate_raw:
+  case bare_zlib_gunzip:
     err = inflate(&stream->handle, flush);
     break;
   }
@@ -241,7 +297,7 @@ bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
   js_value_t *result = NULL;
 
   if (err < Z_OK) {
-    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+    js_throw_error(env, bare_zlib__error_code(err), bare_zlib__error_message(err, stream));
   } else {
     err = js_create_uint32(env, stream->handle.avail_out, &result);
     assert(err == 0);
@@ -269,16 +325,18 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
   switch (stream->mode) {
   case bare_zlib_deflate:
   case bare_zlib_deflate_raw:
+  case bare_zlib_gzip:
     err = deflateEnd(&stream->handle);
     break;
   case bare_zlib_inflate:
   case bare_zlib_inflate_raw:
+  case bare_zlib_gunzip:
     err = inflateEnd(&stream->handle);
     break;
   }
 
   if (err < Z_OK) {
-    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+    js_throw_error(env, bare_zlib__error_code(err), bare_zlib__error_message(err, stream));
   }
 
   err = js_delete_reference(env, stream->on_alloc);
@@ -312,16 +370,18 @@ bare_zlib_reset (js_env_t *env, js_callback_info_t *info) {
   switch (stream->mode) {
   case bare_zlib_deflate:
   case bare_zlib_deflate_raw:
+  case bare_zlib_gzip:
     err = deflateReset(&stream->handle);
     break;
   case bare_zlib_inflate:
   case bare_zlib_inflate_raw:
+  case bare_zlib_gunzip:
     err = inflateReset(&stream->handle);
     break;
   }
 
   if (err < Z_OK) {
-    js_throw_error(env, bare_zlib__error_code(err), stream->handle.msg);
+    js_throw_error(env, bare_zlib__error_code(err), bare_zlib__error_message(err, stream));
   }
 
   return NULL;
@@ -357,9 +417,11 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   }
 
   V("DEFLATE", bare_zlib_deflate)
-  V("DEFLATE_RAW", bare_zlib_deflate_raw)
   V("INFLATE", bare_zlib_inflate)
+  V("DEFLATE_RAW", bare_zlib_deflate_raw)
   V("INFLATE_RAW", bare_zlib_inflate_raw)
+  V("GZIP", bare_zlib_gzip)
+  V("GUNZIP", bare_zlib_gunzip)
 #undef V
 
   js_value_t *constants;
@@ -385,6 +447,33 @@ bare_zlib_exports (js_env_t *env, js_value_t *exports) {
   V(Z_FINISH)
   V(Z_BLOCK)
   V(Z_TREES)
+
+  V(Z_FILTERED)
+  V(Z_HUFFMAN_ONLY)
+  V(Z_RLE)
+  V(Z_FIXED)
+  V(Z_DEFAULT_STRATEGY)
+
+  V(Z_NO_COMPRESSION)
+  V(Z_BEST_SPEED)
+  V(Z_BEST_COMPRESSION)
+  V(Z_DEFAULT_COMPRESSION)
+
+  V(Z_MIN_CHUNK)
+  V(Z_MAX_CHUNK)
+  V(Z_DEFAULT_CHUNK)
+
+  V(Z_MIN_MEMLEVEL)
+  V(Z_MAX_MEMLEVEL)
+  V(Z_DEFAULT_MEMLEVEL)
+
+  V(Z_MIN_LEVEL)
+  V(Z_MAX_LEVEL)
+  V(Z_DEFAULT_LEVEL)
+
+  V(Z_MIN_WINDOWBITS)
+  V(Z_MAX_WINDOWBITS)
+  V(Z_DEFAULT_WINDOWBITS)
 
   V(Z_OK)
   V(Z_STREAM_END)

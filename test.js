@@ -1,4 +1,5 @@
 const test = require('brittle')
+const fs = require('bare-fs')
 const zlib = require('.')
 
 test('deflate + inflate', (t) => {
@@ -41,4 +42,15 @@ test('inflate, write invalid', (t) => {
   inflate
     .on('error', (err) => t.is(err.code, 'DATA_ERROR'))
     .end('foo bar')
+})
+
+test('gunzip', (t) => {
+  t.plan(1)
+
+  const gunzip = new zlib.Gunzip()
+
+  fs.createReadStream('test/fixtures/hello.txt.gz')
+    .pipe(gunzip)
+
+  gunzip.on('data', (data) => t.alike(data, Buffer.from('hello\n')))
 })
