@@ -39,7 +39,7 @@
     "bare-stream": "^2.0.0"
   },
   "devDependencies": {
-    "bare-fs": "^2.3.1",
+    "bare-fs": "^3.0.0",
     "brittle": "^3.5.0",
     "standard": "^17.1.0"
   }
