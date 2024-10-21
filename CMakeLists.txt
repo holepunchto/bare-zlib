@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(bare_zlib C)
-
-include(bare)
+find_package(cmake-bare REQUIRED PATHS node_modules/cmake-bare)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+project(bare_zlib C)
 
 if(NOT TARGET zlib)
   set(ZLIB_BUILD_EXAMPLES OFF)
