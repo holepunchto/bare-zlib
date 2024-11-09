@@ -1,16 +1,15 @@
 cmake_minimum_required(VERSION 3.25)
 
 find_package(cmake-bare REQUIRED PATHS node_modules/cmake-bare)
+find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(bare_zlib C)
 
-if(NOT TARGET zlib)
-  set(ZLIB_BUILD_EXAMPLES OFF)
+set(ZLIB_BUILD_EXAMPLES OFF)
 
-  add_subdirectory(vendor/zlib EXCLUDE_FROM_ALL)
-endif()
+fetch_package("github:madler/zlib@1.3.1")
 
 add_bare_module(bare_zlib)
 

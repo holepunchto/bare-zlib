@@ -14,12 +14,7 @@
     "binding.js",
     "CMakeLists.txt",
     "lib",
-    "prebuilds",
-    "vendor/zlib/LICENSE",
-    "vendor/zlib/*.c",
-    "vendor/zlib/*.cmakein",
-    "vendor/zlib/*.h",
-    "vendor/zlib/win32/*.rc"
+    "prebuilds"
   ],
   "addon": true,
   "scripts": {
@@ -42,6 +37,7 @@
     "bare-fs": "^3.0.0",
     "brittle": "^3.5.0",
     "cmake-bare": "^1.1.7",
+    "cmake-fetch": "^1.0.0",
     "standard": "^17.1.0"
   }
 }
