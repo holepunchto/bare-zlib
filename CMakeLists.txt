@@ -7,8 +7,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(bare_zlib C)
 
-set(ZLIB_BUILD_EXAMPLES OFF)
-
 fetch_package("github:madler/zlib@1.3.1")
 
 add_bare_module(bare_zlib)
