@@ -143,7 +143,6 @@ function readAsBuffer(stream, buffer, cb) {
   }
 
   function onend() {
-    stream.close()
     cb(null, chunks.length === 1 ? chunks[0] : Buffer.concat(chunks))
   }
 
@@ -163,6 +162,15 @@ exports.createDeflate = function createDeflate(opts) {
   return new exports.Deflate(opts)
 }
 
+exports.deflate = function deflate(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.Deflate(opts), buffer, cb)
+}
+
 exports.Inflate = class ZlibInflateStream extends ZlibStream {
   constructor(opts) {
     super(binding.INFLATE, opts)
@@ -171,6 +179,15 @@ exports.Inflate = class ZlibInflateStream extends ZlibStream {
 
 exports.createInflate = function createInflate(opts) {
   return new exports.Inflate(opts)
+}
+
+exports.inflate = function inflate(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.Inflate(opts), buffer, cb)
 }
 
 exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
@@ -183,6 +200,15 @@ exports.createDeflateRaw = function createDeflateRaw(opts) {
   return new exports.DeflateRaw(opts)
 }
 
+exports.deflateRaw = function deflateRaw(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.DeflateRaw(opts), buffer, cb)
+}
+
 exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
   constructor(opts) {
     super(binding.INFLATE_RAW, opts)
@@ -191,6 +217,15 @@ exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
 
 exports.createInflateRaw = function createInflateRaw(opts) {
   return new exports.InflateRaw(opts)
+}
+
+exports.inflateRaw = function inflateRaw(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.InflateRaw(opts), buffer, cb)
 }
 
 exports.Gzip = class ZlibGzipStream extends ZlibStream {
@@ -203,6 +238,15 @@ exports.createGzip = function createGzip(opts) {
   return new exports.Gzip(opts)
 }
 
+exports.gzip = function gzip(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.Gzip(opts), buffer, cb)
+}
+
 exports.Gunzip = class ZlibGunzipStream extends ZlibStream {
   constructor(opts) {
     super(binding.GUNZIP, opts)
@@ -211,4 +255,13 @@ exports.Gunzip = class ZlibGunzipStream extends ZlibStream {
 
 exports.createGunzip = function createGunzip(opts) {
   return new exports.Gunzip(opts)
+}
+
+exports.gunzip = function gunzip(buffer, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+
+  readAsBuffer(new exports.Gunzip(opts), buffer, cb)
 }

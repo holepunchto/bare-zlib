@@ -15,6 +15,19 @@ test('deflate + inflate', (t) => {
   deflate.end('hello')
 })
 
+test('deflare + inflate, callbacks', (t) => {
+  t.plan(3)
+
+  zlib.deflate('hello', (err, data) => {
+    t.absent(err)
+
+    zlib.inflate(data, (err, data) => {
+      t.absent(err)
+      t.alike(data, Buffer.from('hello'))
+    })
+  })
+})
+
 test('deflate + inflate, flush', (t) => {
   t.plan(2)
 
