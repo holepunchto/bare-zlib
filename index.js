@@ -1,10 +1,10 @@
 const { Transform, Writable } = require('bare-stream')
 const binding = require('./binding')
-const constants = exports.constants = require('./lib/constants')
-const errors = exports.errors = require('./lib/errors')
+const constants = (exports.constants = require('./lib/constants'))
+const errors = (exports.errors = require('./lib/errors'))
 
 class ZlibStream extends Transform {
-  constructor (mode, opts = {}) {
+  constructor(mode, opts = {}) {
     super()
 
     const {
@@ -25,31 +25,42 @@ class ZlibStream extends Transform {
 
     this._buffer = Buffer.allocUnsafe(chunkSize)
 
-    this._handle = binding.init(this._mode, this._buffer, level, windowBits, memLevel, strategy, this,
+    this._handle = binding.init(
+      this._mode,
+      this._buffer,
+      level,
+      windowBits,
+      memLevel,
+      strategy,
+      this,
       this._onalloc,
       this._onfree
     )
   }
 
-  _onalloc (size) {
+  _onalloc(size) {
     const buffer = Buffer.allocUnsafe(size)
 
-    const view = new Uint32Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 4)
+    const view = new Uint32Array(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength / 4
+    )
 
     view[0] = this._allocations.push(view) - 1
 
     return buffer
   }
 
-  _onfree (id) {
+  _onfree(id) {
     const last = this._allocations.pop()
 
     if (last[0] !== id) {
-      this._allocations[last[0] = id] = last
+      this._allocations[(last[0] = id)] = last
     }
   }
 
-  async flush (mode = constants.Z_FULL_FLUSH, cb) {
+  async flush(mode = constants.Z_FULL_FLUSH, cb) {
     if (typeof mode === 'function') {
       cb = mode
       mode = constants.Z_FULL_FLUSH
@@ -66,7 +77,7 @@ class ZlibStream extends Transform {
     if (cb) cb(null) // For Node.js compatibility
   }
 
-  reset () {
+  reset() {
     if (this._handle === null) {
       throw errors.STREAM_CLOSED('Stream has already closed')
     }
@@ -74,7 +85,7 @@ class ZlibStream extends Transform {
     binding.reset(this._handle)
   }
 
-  _transform (data, encoding, cb) {
+  _transform(data, encoding, cb) {
     binding.load(this._handle, data)
 
     let available
@@ -98,7 +109,7 @@ class ZlibStream extends Transform {
     cb(null)
   }
 
-  _flush (cb) {
+  _flush(cb) {
     let available
     try {
       available = binding.transform(this._handle, this._finishFlushMode)
@@ -122,62 +133,82 @@ class ZlibStream extends Transform {
   }
 }
 
+function readAsBuffer(stream, buffer, cb) {
+  const chunks = []
+
+  stream.on('data', ondata).on('end', onend).on('error', onerror).end(buffer)
+
+  function ondata(chunk) {
+    chunks.push(chunk)
+  }
+
+  function onend() {
+    stream.close()
+    cb(null, chunks.length === 1 ? chunks[0] : Buffer.concat(chunks))
+  }
+
+  function onerror(err) {
+    stream.off('end', onend)
+    cb(err)
+  }
+}
+
 exports.Deflate = class ZlibDeflateStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.DEFLATE, opts)
   }
 }
 
-exports.createDeflate = function createDeflate (opts) {
+exports.createDeflate = function createDeflate(opts) {
   return new exports.Deflate(opts)
 }
 
 exports.Inflate = class ZlibInflateStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.INFLATE, opts)
   }
 }
 
-exports.createInflate = function createInflate (opts) {
+exports.createInflate = function createInflate(opts) {
   return new exports.Inflate(opts)
 }
 
 exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.DEFLATE_RAW, opts)
   }
 }
 
-exports.createDeflateRaw = function createDeflateRaw (opts) {
+exports.createDeflateRaw = function createDeflateRaw(opts) {
   return new exports.DeflateRaw(opts)
 }
 
 exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.INFLATE_RAW, opts)
   }
 }
 
-exports.createInflateRaw = function createInflateRaw (opts) {
+exports.createInflateRaw = function createInflateRaw(opts) {
   return new exports.InflateRaw(opts)
 }
 
 exports.Gzip = class ZlibGzipStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.GZIP, opts)
   }
 }
 
-exports.createGzip = function createGzip (opts) {
+exports.createGzip = function createGzip(opts) {
   return new exports.Gzip(opts)
 }
 
 exports.Gunzip = class ZlibGunzipStream extends ZlibStream {
-  constructor (opts) {
+  constructor(opts) {
     super(binding.GUNZIP, opts)
   }
 }
 
-exports.createGunzip = function createGunzip (opts) {
+exports.createGunzip = function createGunzip(opts) {
   return new exports.Gunzip(opts)
 }

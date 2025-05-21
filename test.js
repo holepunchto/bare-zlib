@@ -39,9 +39,7 @@ test('inflate, write invalid', (t) => {
 
   const inflate = new zlib.Inflate()
 
-  inflate
-    .on('error', (err) => t.is(err.code, 'DATA_ERROR'))
-    .end('foo bar')
+  inflate.on('error', (err) => t.is(err.code, 'DATA_ERROR')).end('foo bar')
 })
 
 test('gunzip', (t) => {
@@ -49,8 +47,7 @@ test('gunzip', (t) => {
 
   const gunzip = new zlib.Gunzip()
 
-  fs.createReadStream('test/fixtures/hello.txt.gz')
-    .pipe(gunzip)
+  fs.createReadStream('test/fixtures/hello.txt.gz').pipe(gunzip)
 
   gunzip.on('data', (data) => t.alike(data, Buffer.from('hello\n')))
 })

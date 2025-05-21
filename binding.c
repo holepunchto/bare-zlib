@@ -58,7 +58,7 @@ enum {
 };
 
 static inline const char *
-bare_zlib__error_code (int err) {
+bare_zlib__error_code(int err) {
 #define V(code) \
   if (err == Z_##code) return #code;
   BARE_ZLIB_ERROR_CODES(V)
@@ -68,12 +68,12 @@ bare_zlib__error_code (int err) {
 }
 
 static inline const char *
-bare_zlib__error_message (int err, bare_zlib_stream_t *stream) {
+bare_zlib__error_message(int err, bare_zlib_stream_t *stream) {
   return stream->handle.msg == NULL ? "Unknown error" : stream->handle.msg;
 }
 
 static void *
-bare_zlib__on_alloc (void *opaque, unsigned int items, unsigned int size) {
+bare_zlib__on_alloc(void *opaque, unsigned int items, unsigned int size) {
   int err;
 
   bare_zlib_stream_t *stream = (bare_zlib_stream_t *) opaque;
@@ -116,7 +116,7 @@ bare_zlib__on_alloc (void *opaque, unsigned int items, unsigned int size) {
 }
 
 static void
-bare_zlib__on_free (void *opaque, void *ptr) {
+bare_zlib__on_free(void *opaque, void *ptr) {
   int err;
 
   bare_zlib_stream_t *stream = (bare_zlib_stream_t *) opaque;
@@ -150,7 +150,7 @@ bare_zlib__on_free (void *opaque, void *ptr) {
 }
 
 static js_value_t *
-bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_init(js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 9;
@@ -237,7 +237,7 @@ bare_zlib_init (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_load (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_load(js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 2;
@@ -259,7 +259,7 @@ bare_zlib_load (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_transform(js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 2;
@@ -307,7 +307,7 @@ bare_zlib_transform (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_end(js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 1;
@@ -352,7 +352,7 @@ bare_zlib_end (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_reset (js_env_t *env, js_callback_info_t *info) {
+bare_zlib_reset(js_env_t *env, js_callback_info_t *info) {
   int err;
 
   size_t argc = 1;
@@ -388,7 +388,7 @@ bare_zlib_reset (js_env_t *env, js_callback_info_t *info) {
 }
 
 static js_value_t *
-bare_zlib_exports (js_env_t *env, js_value_t *exports) {
+bare_zlib_exports(js_env_t *env, js_value_t *exports) {
   int err;
 
 #define V(name, fn) \
