@@ -28,6 +28,10 @@ test('deflare + inflate, callbacks', (t) => {
   })
 })
 
+test('deflare + inflate, sync', (t) => {
+  t.alike(zlib.inflateSync(zlib.deflateSync('hello')), Buffer.from('hello'))
+})
+
 test('deflate + inflate, flush', (t) => {
   t.plan(2)
 

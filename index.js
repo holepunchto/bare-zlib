@@ -1,12 +1,13 @@
 const { Transform, Writable } = require('bare-stream')
 const binding = require('./binding')
-const constants = (exports.constants = require('./lib/constants'))
-const errors = (exports.errors = require('./lib/errors'))
+const constants = require('./lib/constants')
+const errors = require('./lib/errors')
 
-class ZlibStream extends Transform {
+exports.constants = constants
+exports.errors = errors
+
+class ZlibState {
   constructor(mode, opts = {}) {
-    super()
-
     const {
       flush = constants.Z_NO_FLUSH,
       finishFlush = constants.Z_FINISH,
@@ -60,32 +61,11 @@ class ZlibStream extends Transform {
     }
   }
 
-  async flush(mode = constants.Z_FULL_FLUSH, cb) {
-    if (typeof mode === 'function') {
-      cb = mode
-      mode = constants.Z_FULL_FLUSH
-    }
-
-    const previousMode = this._flushMode
-
-    this._flushMode = mode
-
-    await Writable.drained(this)
-
-    this._flushMode = previousMode
-
-    if (cb) cb(null) // For Node.js compatibility
-  }
-
   reset() {
-    if (this._handle === null) {
-      throw errors.STREAM_CLOSED('Stream has already closed')
-    }
-
     binding.reset(this._handle)
   }
 
-  _transform(data, encoding, cb) {
+  *transform(data) {
     binding.load(this._handle, data)
 
     let available
@@ -93,7 +73,7 @@ class ZlibStream extends Transform {
       try {
         available = binding.transform(this._handle, this._flushMode)
       } catch (err) {
-        return cb(errors[err.code](err.message))
+        throw errors[err.code](err.message)
       }
 
       const read = this._buffer.length - available
@@ -102,34 +82,93 @@ class ZlibStream extends Transform {
         const copy = Buffer.allocUnsafe(read)
         copy.set(this._buffer.subarray(0, read))
 
-        this.push(copy)
+        yield copy
       }
     } while (available === 0)
-
-    cb(null)
   }
 
-  _flush(cb) {
+  *flush() {
     let available
     try {
       available = binding.transform(this._handle, this._finishFlushMode)
     } catch (err) {
-      return cb(errors[err.code](err.message))
+      throw errors[err.code](err.message)
     }
 
     const read = this._buffer.length - available
 
-    if (read) this.push(this._buffer.subarray(0, read))
+    if (read) yield this._buffer.subarray(0, read)
 
     try {
       binding.end(this._handle)
     } catch (err) {
-      return cb(errors[err.code](err.message))
+      throw errors[err.code](err.message)
     }
 
     this._handle = null
+  }
+}
 
-    cb(null)
+class ZlibStream extends Transform {
+  constructor(mode, opts = {}) {
+    super()
+
+    this._state = new ZlibState(mode, opts)
+  }
+
+  async flush(mode = constants.Z_FULL_FLUSH, cb) {
+    if (typeof mode === 'function') {
+      cb = mode
+      mode = constants.Z_FULL_FLUSH
+    }
+
+    const previousMode = this._state._flushMode
+
+    this._state._flushMode = mode
+
+    await Writable.drained(this)
+
+    this._state._flushMode = previousMode
+
+    if (cb) cb(null) // For Node.js compatibility
+  }
+
+  reset() {
+    if (this._state === null) {
+      throw errors.STREAM_CLOSED('Stream has already closed')
+    }
+
+    this._state.flush()
+  }
+
+  _transform(data, encoding, cb) {
+    let err = null
+
+    try {
+      for (const chunk of this._state.transform(data)) {
+        this.push(chunk)
+      }
+    } catch (e) {
+      err = e
+    }
+
+    cb(err)
+  }
+
+  _flush(cb) {
+    let err = null
+
+    try {
+      for (const chunk of this._state.flush()) {
+        this.push(chunk)
+      }
+    } catch (e) {
+      err = e
+    }
+
+    this._state = null
+
+    cb(err)
   }
 }
 
@@ -152,6 +191,23 @@ function readAsBuffer(stream, buffer, cb) {
   }
 }
 
+function transformToBuffer(mode, buffer, opts) {
+  if (typeof buffer === 'string') buffer = Buffer.from(buffer)
+
+  const state = new ZlibState(mode, opts)
+  const chunks = []
+
+  for (const chunk of state.transform(buffer)) {
+    chunks.push(chunk)
+  }
+
+  for (const chunk of state.flush()) {
+    chunks.push(chunk)
+  }
+
+  return chunks.length === 1 ? chunks[0] : Buffer.concat(chunks)
+}
+
 exports.Deflate = class ZlibDeflateStream extends ZlibStream {
   constructor(opts) {
     super(binding.DEFLATE, opts)
@@ -169,6 +225,10 @@ exports.deflate = function deflate(buffer, opts, cb) {
   }
 
   readAsBuffer(new exports.Deflate(opts), buffer, cb)
+}
+
+exports.deflateSync = function deflateSync(buffer, opts) {
+  return transformToBuffer(binding.DEFLATE, buffer, opts)
 }
 
 exports.Inflate = class ZlibInflateStream extends ZlibStream {
@@ -190,6 +250,10 @@ exports.inflate = function inflate(buffer, opts, cb) {
   readAsBuffer(new exports.Inflate(opts), buffer, cb)
 }
 
+exports.inflateSync = function inflateSync(buffer, opts) {
+  return transformToBuffer(binding.INFLATE, buffer, opts)
+}
+
 exports.DeflateRaw = class ZlibDeflateRawStream extends ZlibStream {
   constructor(opts) {
     super(binding.DEFLATE_RAW, opts)
@@ -207,6 +271,10 @@ exports.deflateRaw = function deflateRaw(buffer, opts, cb) {
   }
 
   readAsBuffer(new exports.DeflateRaw(opts), buffer, cb)
+}
+
+exports.deflateRawSync = function deflateRawSync(buffer, opts) {
+  return transformToBuffer(binding.DEFLATE_RAW, buffer, opts)
 }
 
 exports.InflateRaw = class ZlibInflateRawStream extends ZlibStream {
@@ -228,6 +296,10 @@ exports.inflateRaw = function inflateRaw(buffer, opts, cb) {
   readAsBuffer(new exports.InflateRaw(opts), buffer, cb)
 }
 
+exports.inflateRawSync = function inflateRawSync(buffer, opts) {
+  return transformToBuffer(binding.INFLATE_RAW, buffer, opts)
+}
+
 exports.Gzip = class ZlibGzipStream extends ZlibStream {
   constructor(opts) {
     super(binding.GZIP, opts)
@@ -247,6 +319,10 @@ exports.gzip = function gzip(buffer, opts, cb) {
   readAsBuffer(new exports.Gzip(opts), buffer, cb)
 }
 
+exports.gzipSync = function gzipSync(buffer, opts) {
+  return transformToBuffer(binding.GZIP, buffer, opts)
+}
+
 exports.Gunzip = class ZlibGunzipStream extends ZlibStream {
   constructor(opts) {
     super(binding.GUNZIP, opts)
@@ -264,4 +340,8 @@ exports.gunzip = function gunzip(buffer, opts, cb) {
   }
 
   readAsBuffer(new exports.Gunzip(opts), buffer, cb)
+}
+
+exports.gunzipSync = function gunzipSync(buffer, opts) {
+  return transformToBuffer(binding.GUNZIP, buffer, opts)
 }
