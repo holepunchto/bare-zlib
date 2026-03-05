@@ -42,11 +42,7 @@ class ZlibState {
   _onalloc(size) {
     const buffer = Buffer.allocUnsafe(size)
 
-    const view = new Uint32Array(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength / 4
-    )
+    const view = new Uint32Array(buffer.buffer, buffer.byteOffset, buffer.byteLength / 4)
 
     view[0] = this._allocations.push(view) - 1
 
