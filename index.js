@@ -141,7 +141,7 @@ class ZlibStream extends Transform {
       throw errors.STREAM_CLOSED('Stream has already closed')
     }
 
-    this._state.flush()
+    this._state.reset()
   }
 
   _transform(data, encoding, cb) {
