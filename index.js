@@ -85,15 +85,22 @@ class ZlibState {
 
   *flush() {
     let available
-    try {
-      available = binding.transform(this._handle, this._finishFlushMode)
-    } catch (err) {
-      throw errors[err.code](err.message)
-    }
+    do {
+      try {
+        available = binding.transform(this._handle, this._finishFlushMode)
+      } catch (err) {
+        throw errors[err.code](err.message)
+      }
 
-    const read = this._buffer.length - available
+      const read = this._buffer.length - available
 
-    if (read) yield this._buffer.subarray(0, read)
+      if (read) {
+        const copy = Buffer.allocUnsafe(read)
+        copy.set(this._buffer.subarray(0, read))
+
+        yield copy
+      }
+    } while (available === 0)
 
     try {
       binding.end(this._handle)
