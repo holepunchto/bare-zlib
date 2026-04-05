@@ -296,7 +296,7 @@ bare_zlib_transform(js_env_t *env, js_callback_info_t *info) {
 
   js_value_t *result = NULL;
 
-  if (err < Z_OK) {
+  if (err < Z_OK && err != Z_BUF_ERROR) {
     js_throw_error(env, bare_zlib__error_code(err), bare_zlib__error_message(err, stream));
   } else {
     err = js_create_uint32(env, stream->handle.avail_out, &result);
