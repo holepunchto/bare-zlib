@@ -6,6 +6,8 @@ const errors = require('./lib/errors')
 exports.constants = constants
 exports.errors = errors
 
+const MAX_OUTPUT_LENGTH = (Buffer.constants && Buffer.constants.MAX_LENGTH) || 0x100000000
+
 class ZlibState {
   constructor(mode, opts = {}) {
     const {
@@ -15,7 +17,8 @@ class ZlibState {
       level = constants.Z_DEFAULT_LEVEL,
       windowBits = constants.Z_DEFAULT_WINDOWBITS,
       memLevel = constants.Z_DEFAULT_MEMLEVEL,
-      strategy = constants.Z_DEFAULT_STRATEGY
+      strategy = constants.Z_DEFAULT_STRATEGY,
+      maxOutputLength = MAX_OUTPUT_LENGTH
     } = opts
 
     this._mode = mode
@@ -23,6 +26,9 @@ class ZlibState {
     this._flushMode = flush
     this._finishFlushMode = finishFlush
     this._allocations = []
+
+    this._maxOutputLength = maxOutputLength
+    this._outputLength = 0
 
     this._buffer = Buffer.allocUnsafe(chunkSize)
 
@@ -58,6 +64,8 @@ class ZlibState {
   }
 
   reset() {
+    this._outputLength = 0
+
     binding.reset(this._handle)
   }
 
@@ -75,6 +83,14 @@ class ZlibState {
       const read = this._buffer.length - available
 
       if (read) {
+        this._outputLength += read
+
+        if (this._outputLength > this._maxOutputLength) {
+          throw errors.LIMIT_EXCEEDED(
+            `Output length exceeded maxOutputLength of ${this._maxOutputLength} bytes`
+          )
+        }
+
         const copy = Buffer.allocUnsafe(read)
         copy.set(this._buffer.subarray(0, read))
 
@@ -95,6 +111,14 @@ class ZlibState {
       const read = this._buffer.length - available
 
       if (read) {
+        this._outputLength += read
+
+        if (this._outputLength > this._maxOutputLength) {
+          throw errors.LIMIT_EXCEEDED(
+            `Output length exceeded maxOutputLength of ${this._maxOutputLength} bytes`
+          )
+        }
+
         const copy = Buffer.allocUnsafe(read)
         copy.set(this._buffer.subarray(0, read))
 
