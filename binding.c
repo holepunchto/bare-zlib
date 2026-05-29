@@ -174,8 +174,11 @@ bare_zlib_init(js_env_t *env, js_callback_info_t *info) {
   err = js_get_value_int32(env, argv[0], &stream->mode);
   assert(err == 0);
 
-  err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->read.base, (size_t *) &stream->read.len, NULL, NULL);
+  size_t read_len;
+  err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->read.base, &read_len, NULL, NULL);
   assert(err == 0);
+
+  stream->read.len = read_len;
 
   int level;
   err = js_get_value_int32(env, argv[2], &level);
@@ -252,8 +255,16 @@ bare_zlib_load(js_env_t *env, js_callback_info_t *info) {
   err = js_get_arraybuffer_info(env, argv[0], (void **) &stream, NULL);
   assert(err == 0);
 
-  err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->handle.next_in, (size_t *) &stream->handle.avail_in, NULL, NULL);
+  size_t avail_in;
+  err = js_get_typedarray_info(env, argv[1], NULL, (void **) &stream->handle.next_in, &avail_in, NULL, NULL);
   assert(err == 0);
+
+  if (avail_in > UINT_MAX) {
+    js_throw_error(env, "STREAM_ERROR", "Input buffer exceeds maximum size");
+    return NULL;
+  }
+
+  stream->handle.avail_in = (uInt) avail_in;
 
   return NULL;
 }

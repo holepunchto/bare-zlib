@@ -68,3 +68,23 @@ test('gunzip', (t) => {
 
   gunzip.on('data', (data) => t.alike(data, Buffer.from('hello\n')))
 })
+
+test('inflateSync, maxOutputLength caps decompression', (t) => {
+  const payload = zlib.deflateSync(Buffer.alloc(64 * 1024, 0))
+
+  try {
+    zlib.inflateSync(payload, { maxOutputLength: 1024 })
+    t.fail('expected LIMIT_EXCEEDED')
+  } catch (err) {
+    t.is(err.code, 'LIMIT_EXCEEDED')
+  }
+})
+
+test('inflate stream, maxOutputLength caps decompression', (t) => {
+  t.plan(1)
+
+  const payload = zlib.deflateSync(Buffer.alloc(64 * 1024, 0))
+  const inflate = new zlib.Inflate({ maxOutputLength: 1024 })
+
+  inflate.on('error', (err) => t.is(err.code, 'LIMIT_EXCEEDED')).end(payload)
+})
