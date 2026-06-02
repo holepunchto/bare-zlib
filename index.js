@@ -138,7 +138,9 @@ class ZlibState {
 
 class ZlibStream extends Transform {
   constructor(mode, opts = {}) {
-    super()
+    const { flush, ...streamOpts } = opts
+
+    super(streamOpts)
 
     this._state = new ZlibState(mode, opts)
   }
