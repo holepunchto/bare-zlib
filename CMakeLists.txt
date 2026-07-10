@@ -1,9 +1,7 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 4.0)
 
 find_package(cmake-bare REQUIRED PATHS node_modules/cmake-bare)
 find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 project(bare_zlib C)
 
