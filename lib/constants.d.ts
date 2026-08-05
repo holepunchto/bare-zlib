@@ -1,3 +1,4 @@
+/** Zlib-related constants such as flush modes, compression levels, strategies, and chunk/window/memory-level bounds. */
 declare const constants: {
   Z_NO_FLUSH: number
   Z_PARTIAL_FLUSH: number
